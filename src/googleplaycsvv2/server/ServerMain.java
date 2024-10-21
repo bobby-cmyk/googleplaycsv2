@@ -1,4 +1,4 @@
-package googleplaycsvv2;
+package googleplaycsvv2.server;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -43,12 +43,56 @@ public class ServerMain {
             DataOutputStream dos = new DataOutputStream(bos);
 
             // Wait to read command from client
-            String command = dis.readUTF();
+            String input = dis.readUTF();
+
+            // Validate the command provided by user
+            String[] parts = input.split(" ");
+
+            String clientName = "";
+
+            String command = "";
+
+            String category = "";
+
+            String response = "";
+
+            if (parts.length == 2) {
+                clientName = parts[0];
+                command = parts[1]; 
+            }
+            
+            else if (parts.length == 3) {
+                clientName = parts[0];
+                command = parts[1];
+                category = parts[2];
+            }
+
+            else {
+                // Command does not exist
+                response = "Command does not exist";
+            }
+        
+            // check if command provided is either list, quit, max, min, or avg
+            if (command.equals("list")) {
+                response = "Good - list";
+            }
+
+            else if (command.equals("quit")) {
+                response = "Good - quit";
+            }
+
+            else if (command.equals("max") || command.equals("min") || command.equals("avg")) {
+                response = "Good - commands";
+            }
+
+            else {
+                response = "Command does not exist";
+            }
 
             //TODO: pass command to csvHandler
 
             // Send response to client
-            dos.writeUTF("This is a response from the server");
+            dos.writeUTF("Hey %s, this is a response from the server: %s".formatted(clientName, response));
             dos.flush();
 
             // Close from the reverse order of opening
@@ -59,6 +103,8 @@ public class ServerMain {
             dos.close();
             bos.close();
             os.close();
+
+            server.close();
         }
 
         catch (IOException ie) {
@@ -101,3 +147,8 @@ public class ServerMain {
 3. work on csvreader
 5. multithread the program
  */
+
+
+ // File reading and processing
+ // Client and server basic networking
+ // Multi-threading
