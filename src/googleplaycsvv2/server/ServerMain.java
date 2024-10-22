@@ -4,14 +4,21 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+
+
+import googleplaycsvv2.csvfilehandler.CsvHandler;
 
 public class ServerMain {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException, IOException {
         
         // Validate command line args to ensure user provide 2 args: port and csv path, else exit program
         if (args.length != 2) {
@@ -23,92 +30,27 @@ public class ServerMain {
 
         String csvPath = args[1];
 
+        CsvHandler csvHandler = new CsvHandler();
+
+        // Read file provided by user
+        csvHandler.read(csvPath);
+
         // Initilise server socket
-        try (ServerSocket server = new ServerSocket(port)) {
-            
+        ServerSocket server = new ServerSocket(port);
+
+        ExecutorService threadPool = Executors.newFixedThreadPool(4);
+
+        while (true) {
             // Wait for connection
             System.out.printf(">>> Waiting for connection at port: %d\n", port);
             Socket sock = server.accept();
 
             // Connected to client n
             System.out.printf(">>> Connected to client\n");
+
+            ConnectionHandler worker = new ConnectionHandler(sock, csvHandler);
             
-            // Initialise input and output streams to wait for command and send back response
-            InputStream is = sock.getInputStream();
-            BufferedInputStream bis = new BufferedInputStream(is);
-            DataInputStream dis = new DataInputStream(bis);
-
-            OutputStream os = sock.getOutputStream();
-            BufferedOutputStream bos = new BufferedOutputStream(os);
-            DataOutputStream dos = new DataOutputStream(bos);
-
-            // Wait to read command from client
-            String input = dis.readUTF();
-
-            // Validate the command provided by user
-            String[] parts = input.split(" ");
-
-            String clientName = "";
-
-            String command = "";
-
-            String category = "";
-
-            String response = "";
-
-            if (parts.length == 2) {
-                clientName = parts[0];
-                command = parts[1]; 
-            }
-            
-            else if (parts.length == 3) {
-                clientName = parts[0];
-                command = parts[1];
-                category = parts[2];
-            }
-
-            else {
-                // Command does not exist
-                response = "Command does not exist";
-            }
-        
-            // check if command provided is either list, quit, max, min, or avg
-            if (command.equals("list")) {
-                response = "Good - list";
-            }
-
-            else if (command.equals("quit")) {
-                response = "Good - quit";
-            }
-
-            else if (command.equals("max") || command.equals("min") || command.equals("avg")) {
-                response = "Good - commands";
-            }
-
-            else {
-                response = "Command does not exist";
-            }
-
-            //TODO: pass command to csvHandler
-
-            // Send response to client
-            dos.writeUTF("Hey %s, this is a response from the server: %s".formatted(clientName, response));
-            dos.flush();
-
-            // Close from the reverse order of opening
-            dis.close();
-            bis.close();
-            is.close();
-
-            dos.close();
-            bos.close();
-            os.close();
-
-            server.close();
-        }
-
-        catch (IOException ie) {
-            System.out.printf(">>> Unable to initialise server socket: %s\n", ie.getMessage());
+            threadPool.submit(worker);
         }
     }
 }

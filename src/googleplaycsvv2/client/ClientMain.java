@@ -13,7 +13,7 @@ import java.net.UnknownHostException;
 
 public class ClientMain {
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws UnknownHostException, IOException {
         
         // Ensure that client provides both the port and its name in command line, else exit
         if (args.length != 2) {
@@ -25,51 +25,52 @@ public class ClientMain {
         String clientName = args[1];
 
         
-        try (Socket sock = new Socket("localhost", port)) {
-            System.out.printf(">>> %s is connected to server at port %d\n", clientName, port);
+        Socket sock = new Socket("localhost", port);
 
-            // Initialise output and input stream to send and receive to/from server
-            OutputStream os = sock.getOutputStream();
-            BufferedOutputStream bos = new BufferedOutputStream(os);
-            DataOutputStream dos = new DataOutputStream(bos);
-            
-            InputStream is = sock.getInputStream();
-            BufferedInputStream bis = new BufferedInputStream(is);
-            DataInputStream dis = new DataInputStream(bis);
+        System.out.printf(">>> %s is connected to server at port %d\n", clientName, port);
 
-            // Send a command to the server
-            Console cons = System.console();
-            
-            System.out.println("Commands:\n * <list> - show all categories \n * <quit> - quit program \n * <action> <category> - e.g <max> <lifestyle>, <min> <utility>, <avg> <education>\n");
+        // Initialise output and input stream to send and receive to/from server
+        OutputStream os = sock.getOutputStream();
+        BufferedOutputStream bos = new BufferedOutputStream(os);
+        DataOutputStream dos = new DataOutputStream(bos);
+        
+        InputStream is = sock.getInputStream();
+        BufferedInputStream bis = new BufferedInputStream(is);
+        DataInputStream dis = new DataInputStream(bis);
 
+        // Send a command to the server
+        Console cons = System.console();
+        
+        System.out.print("<-- All Commands -->\n * <list> - show all categories \n * <quit> - quit program \n * <action> <category> - e.g <max> <lifestyle>, <min> <utility>, <avg> <education>\n");
+
+        while (true) {
+
+            System.out.print(">>> Your Command: ");
             // trim for whitespaces, and transform to lowercase
             String input = cons.readLine().trim().toLowerCase();
-            
-            dos.writeUTF("%s %s".formatted(clientName, input));
+
+            dos.writeUTF(input);
             dos.flush();
 
             String response = dis.readUTF();
 
-            System.out.printf(">>> Response: %s\n", response);
+            if (response.equals("quit")) {
+                System.out.println("Connection has ended");
+                break;
+            }
 
-            //close
-            dos.close();
-            bos.close();
-            os.close();
-
-            dis.close();
-            bis.close();
-            is.close();
-
-            sock.close();
-        } 
-
-        catch (UnknownHostException uhe) {
-            System.out.printf("Host provided is unknown: %s", uhe.getMessage());
+            System.out.println(response);
+            
         }
 
-        catch (IOException e) {
-            System.out.printf("Unable to close socket properly on client side: %s\n", e.getMessage());
-        }
+        dos.close();
+        bos.close();
+        os.close();
+
+        dis.close();
+        bis.close();
+        is.close();
+
+        sock.close();
     }
 }
